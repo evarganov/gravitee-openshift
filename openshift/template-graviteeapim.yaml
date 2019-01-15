@@ -4,7 +4,6 @@ metadata:
   creationTimestamp: null
   name: ${NAMESPACE}
 objects:
-- apiVersion: v1
   kind: DeploymentConfig
   metadata:
     creationTimestamp: null
@@ -245,61 +244,6 @@ objects:
           namespace: ${NAMESPACE}
       type: ImageChange
   status: {}
-- apiVersion: v1
-  kind: DeploymentConfig
-  metadata:
-    creationTimestamp: null
-    generation: 1
-    name: mongodb
-    labels:
-      compose: ${NAMESPACE}
-      app: mongodb
-  spec:
-    replicas: 1
-    selector:
-      deploymentconfig: mongodb
-    strategy:
-      resources: {}
-      rollingParams:
-        intervalSeconds: 1
-        maxSurge: 25%
-        maxUnavailable: 25%
-        timeoutSeconds: 600
-        updatePeriodSeconds: 1
-      type: Rolling
-    template:
-      metadata:
-        creationTimestamp: null
-        labels:
-          deploymentconfig: mongodb
-      spec:
-        containers:
-        - image: mongo:3.2
-          imagePullPolicy: IfNotPresent
-          name: mongodb
-          ports:
-          - containerPort: 27017
-            protocol: TCP
-          resources: {}
-          terminationMessagePath: /dev/termination-log
-          volumeMounts:
-          - mountPath: /data/db
-            name: mongodata1
-        dnsPolicy: ClusterFirst
-        restartPolicy: Always
-        securityContext: {}
-        serviceAccount: ${NAMESPACE}
-        serviceAccountName: ${NAMESPACE}
-        terminationGracePeriodSeconds: 30
-        volumes:
-        - name: mongodata1
-          persistentVolumeClaim:
-            claimName: mongodata
-    test: false
-    triggers:
-    - type: ConfigChange
-  status: {}
-- apiVersion: v1
   kind: Service
   metadata:
     creationTimestamp: null
@@ -367,7 +311,6 @@ objects:
     type: ClusterIP
   status:
     loadBalancer: {}
-- apiVersion: v1
   kind: Service
   metadata:
     creationTimestamp: null
@@ -432,23 +375,6 @@ objects:
       name: managementui
       weight: 100
     wildcardPolicy: None
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    annotations:
-      pv.kubernetes.io/bind-completed: "yes"
-      pv.kubernetes.io/bound-by-controller: "yes"
-    creationTimestamp: null
-    name: mongodata
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 100Mi
-    volumeName: pv0001
-  status: {}
-- apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
     annotations:
@@ -475,13 +401,6 @@ parameters:
     required: true 
   - name: OPENSHIFT_SUFFIXE
     description: Base of web access for openshift 
-    value: minishift.local
+    value: 192.168.99.100.nip.io
     required: true
   - name: STORAGE_ELASTIC
-    description: Gi storage for elasticsearch 
-    value: 100Mi
-    required: true 
-  - name: STORAGE_MONGO
-    description: Gi storage for mongodb 
-    value: 100Mi
-    required: true 
