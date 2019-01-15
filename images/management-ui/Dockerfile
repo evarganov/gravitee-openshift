@@ -31,14 +31,14 @@ RUN wget https://download.gravitee.io/graviteeio-apim/distributions/graviteeio-f
     && rm -rf /tmp/*
 
 
-ENV MGMT_API_URL http://managementapi-gravitee.minishift.local/management/
+ENV MGMT_API_URL http://managementapi-gravitee.192.168.99.100.nip.io/management/
 
 RUN cp /var/www/html/constants.json /var/www/html/constants.json.template
 COPY html/constants.json /var/www/html/constants.json
 
 # forward request and error logs to docker log collector
-#RUN ln -sf /dev/stdout /var/log/nginx/access.log \
-#	&& ln -sf /dev/stderr /var/log/nginx/error.log
+RUN ln -sf /dev/stdout /var/log/nginx/access.log \
+	&& ln -sf /dev/stderr /var/log/nginx/error.log
 
 EXPOSE 80 443
 #ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
