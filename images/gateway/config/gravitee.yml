@@ -181,8 +181,8 @@ ds:
     dbname: gravitee
     host: ${GRAVITEEIO_MONGODB_HOST:localhost}
     port: ${GRAVITEEIO_MONGODB_PORT:27017}
-    username: admin
-    password: admin
+    username: gravitee
+    password: gravitee
   elastic:
     host: ${GRAVITEEIO_ELASTIC_HOST:localhost}
     port: ${GRAVITEEIO_ELASTIC_PORT:9300}
