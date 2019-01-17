@@ -31,7 +31,7 @@ RUN wget https://download.gravitee.io/graviteeio-apim/distributions/graviteeio-f
     && rm -rf /tmp/*
 
 
-ENV MGMT_API_URL http://managementapi-gravitee.192.168.99.100.nip.io/management/
+ENV MGMT_API_URL http://managementapi-gravitee.192.168.99.101.nip.io/management/
 
 RUN cp /var/www/html/constants.json /var/www/html/constants.json.template
 COPY html/constants.json /var/www/html/constants.json

@@ -301,5 +301,5 @@ parameters:
     required: true 
   - name: OPENSHIFT_SUFFIXE
     description: Base of web access for openshift 
-    value: 192.168.99.100.nip.io
+    value: 192.168.99.101.nip.io
     required: true
