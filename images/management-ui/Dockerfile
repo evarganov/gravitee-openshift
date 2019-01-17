@@ -37,8 +37,8 @@ RUN cp /var/www/html/constants.json /var/www/html/constants.json.template
 COPY html/constants.json /var/www/html/constants.json
 
 # forward request and error logs to docker log collector
-RUN ln -sf /dev/stdout /var/log/nginx/access.log \
-	&& ln -sf /dev/stderr /var/log/nginx/error.log
+#RUN ln -sf /dev/stdout /var/log/nginx/access.log \
+#	&& ln -sf /dev/stderr /var/log/nginx/error.log
 
 EXPOSE 80 443
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
