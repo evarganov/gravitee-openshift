@@ -15,7 +15,7 @@ oc adm policy add-scc-to-user anyuid -z gravitee
 
 oc login -u developer -p developer
 
-export GRAVITEEIO_VERSION=1.10.4
+export GRAVITEEIO_VERSION=1.26.1
 
 # 1. definie build
 # 2. start building

@@ -1,0 +1,375 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: gravitee
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: elasticsearch
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: elasticsearch
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: elasticsearch
+      spec:
+        containers:
+        - image: docker-registry.x5.ru/elasticsearch:2
+          imagePullPolicy: IfNotPresent
+          name: elasticsearch
+          ports:
+          - containerPort: 9200
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /usr/share/elasticsearch/data/
+            name: elasticdata1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: elasticdata1
+          persistentVolumeClaim:
+            claimName: api-gw-elastic-data
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: gateway
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: gateway
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: gateway
+      spec:
+        containers:
+        - env:
+          - name: GRAVITEEIO_ELASTIC_HOST
+            value: elasticsearch
+          - name: GRAVITEEIO_MONGODB_HOST
+            value: mongodb
+          image: docker-registry.x5.ru/graviteeio/gateway:latest
+          imagePullPolicy: Always
+          name: gateway
+          ports:
+          - containerPort: 8082
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: managementapi
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: managementapi
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: managementapi
+      spec:
+        containers:
+        - env:
+          - name: GRAVITEEIO_ELASTIC_HOST
+            value: elasticsearch
+          - name: GRAVITEEIO_MONGODB_HOST
+            value: mongodb
+          image: docker-registry.x5.ru/graviteeio/management-api:latest
+          imagePullPolicy: Always
+          name: managementapi
+          ports:
+          - containerPort: 8083
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: managementui
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: managementui
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: managementui
+      spec:
+        containers:
+        - env:
+          - name: MGMT_API_URL
+            value: http://managementapi-gravitee.os-dev.x5.ru/management/
+          image: docker-registry.x5.ru/graviteeio/management-ui:latest
+          imagePullPolicy: Always
+          name: managementui
+          ports:
+          - containerPort: 80
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: mongodb
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: mongodb
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: mongodb
+      spec:
+        containers:
+        - image: docker-registry.x5.ru/mongo:3.2
+          imagePullPolicy: IfNotPresent
+          name: mongodb
+          ports:
+          - containerPort: 27017
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /data/db
+            name: mongodata1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: mongodata1
+          persistentVolumeClaim:
+            claimName: api-gw-mongo-data
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: elasticsearch
+  spec:
+    ports:
+    - name: 9300-tcp
+      port: 9300
+      protocol: TCP
+      targetPort: 9200
+    selector:
+      deploymentconfig: elasticsearch
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: gateway
+  spec:
+    ports:
+    - name: 8082-tcp
+      port: 8082
+      protocol: TCP
+      targetPort: 8082
+    selector:
+      deploymentconfig: gateway
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: managementapi
+  spec:
+    ports:
+    - name: 8083-tcp
+      port: 8083
+      protocol: TCP
+      targetPort: 8083
+    selector:
+      deploymentconfig: managementapi
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: managementui
+  spec:
+    ports:
+    - name: 80-tcp
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    selector:
+      deploymentconfig: managementui
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: mongodb
+  spec:
+    ports:
+    - name: 27017-tcp
+      port: 27017
+      protocol: TCP
+      targetPort: 27017
+    selector:
+      deploymentconfig: mongodb
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    name: gateway
+  spec:
+    port:
+      targetPort: 8082-tcp
+    to:
+      kind: Service
+      name: gateway
+      weight: 100
+    wildcardPolicy: None
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    name: managementapi
+  spec:
+    host: managementapi-gravitee.os-dev.x5.ru
+    port:
+      targetPort: 8083-tcp
+    to:
+      kind: Service
+      name: managementapi
+      weight: 100
+    wildcardPolicy: None
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    name: managementui
+  spec:
+    host: managementui-gravitee.os-dev.x5.ru
+    port:
+      targetPort: 80-tcp
+    to:
+      kind: Service
+      name: managementui
+      weight: 100
+    wildcardPolicy: None

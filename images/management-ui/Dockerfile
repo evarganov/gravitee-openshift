@@ -10,10 +10,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #-------------------------------------------------------------------------------
-FROM nginx:1.10.2-alpine
+FROM docker-registry.x5.ru/nginx:1.10.2-alpine
 MAINTAINER Gravitee Team <http://gravitee.io>
 
-ARG GRAVITEEIO_VERSION=0
+ARG GRAVITEEIO_VERSION=1.25.5
 
 COPY files/*.sh /usr/local/bin/
 RUN chmod u+x /usr/local/bin/*.sh

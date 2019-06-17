@@ -4,6 +4,545 @@ metadata:
   creationTimestamp: null
   name: ${NAMESPACE}
 objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: managementui-config
+    labels:
+      compose: ${NAMESPACE}
+      app: managementui
+  data:
+    constants.json: |-
+      {                                                                               
+          "baseURL": "http://managementapi-${NAMESPACE}.${OPENSHIFT_SUFFIXE}/management/",                               
+          "portalTitle": "Gravitee.io Portal",                                          
+          "managementTitle": "Gravitee.io Management",                                  
+          "devMode": false,                                                             
+          "userCreationEnabled": true,                                                  
+          "documentation": {                                                            
+            "url": "https://docs.gravitee.io"                                           
+          },                                                                            
+          "portal": {                                                                   
+            "entrypoint": "http://ateway-${NAMESPACE}.${OPENSHIFT_SUFFIXE}",                                    
+            "apikeyHeader": "X-Gravitee-Api-Key"                                        
+          },                                                                            
+          "theme": {                                                                    
+            "name": "default",                                                          
+            "logo": "themes/assets/GRAVITEE_LOGO1-01.png",                              
+            "loader": "assets/gravitee_logo_anim.gif"                                   
+          },                                                                            
+          "support": {                                                                  
+            "enabled": false                                                            
+          }                                                                             
+        }
+    default.conf: |-
+      server {
+          listen 80 default_server;
+          server_name _;
+          root /var/www/html;
+          index index.html index.htm;
+          charset utf-8;
+          
+          location /management/ {
+              rewrite ^/management(.*)$ $1 last;
+              try_files $uri $uri/ =404;
+          }
+      }
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: managementapi-config
+    labels:
+      compose: ${NAMESPACE}
+      app: managementapi
+  data:
+    gravitee.yml: |-
+      ############################################################################################################
+      ################################ Gravitee.IO Management API - Configuration ################################
+      ############################################################################################################
+
+      ############################################################################################################
+      # This file is the general configuration of Gravitee.IO Management API:
+      # - Properties (and respective default values) in comment are provided for information.
+      # - You can reference other property by using ${property.name} syntax
+      # - gravitee.home property is automatically set-up by launcher and refers to the installation path. Do not override it !
+      #
+      # Please have a look to http://docs.gravitee.io/ for more options and fine-grained granularity
+      ############################################################################################################
+
+      # HTTP Server
+      #jetty:
+      #  IP/hostname to bind to. Default is 0.0.0.0
+      #  host: 0.0.0.0
+      #  port: 8083
+      #  idleTimeout: 30000
+      #  acceptors: -1
+      #  selectors: -1
+      #  pool:
+      #    minThreads: 10
+      #    maxThreads: 200
+      #    idleTimeout: 60000
+      #    queueSize: 6000
+      #  jmx: false
+      #  statistics: false
+      #  accesslog:
+      #    enabled: true
+      #    path: ${gravitee.home}/logs/gravitee_accesslog_yyyy_mm_dd.log
+
+      # Plugins repository
+      #plugins:
+      #  path:
+      #    - ${gravitee.home}/plugins
+      #    - ${gravitee.home}/my-custom-plugins
+      # If a external is already installed (but with a different version), management node does not start anymore
+      #  failOnDuplicate: true
+
+      # Management repository is used to store global configuration such as APIs, applications, apikeys, ...
+      # This is the default configuration using MongoDB (single server)
+      # For more information about MongoDB configuration, please have a look to:
+      # - http://api.mongodb.org/java/current/com/mongodb/MongoClientOptions.html
+      management:
+        type: mongodb
+        mongodb:
+          dbname: ${ds.mongodb.dbname}
+          host: ${ds.mongodb.host}
+          port: ${ds.mongodb.port}
+          username: ${ds.mongodb.username}
+          password: ${ds.mongodb.password}
+      #    connectionsPerHost: 0
+      #    connectTimeout: 500
+      #    maxWaitTime: 120000
+      #    socketTimeout: 500
+      #    socketKeepAlive: false
+      #    maxConnectionLifeTime: 0
+      #    maxConnectionIdleTime: 0
+      #    serverSelectionTimeout: 0
+      #    description: gravitee.io
+      #    heartbeatFrequency: 10000
+      #    minHeartbeatFrequency: 500
+      #    heartbeatConnectTimeout: 1000
+      #    heartbeatSocketTimeout: 20000
+      #    localThreshold: 15
+      #    minConnectionsPerHost: 0
+      #    sslEnabled: false
+      #    threadsAllowedToBlockForConnectionMultiplier: 5
+      #    cursorFinalizerEnabled: true
+
+      # Management repository: single MongoDB using URI
+      # For more information about MongoDB configuration using URI, please have a look to:
+      # - http://api.mongodb.org/java/current/com/mongodb/MongoClientURI.html
+      #management:
+      #  type: mongodb
+      #  mongodb:
+      #    uri: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+      # Management repository: clustered MongoDB
+      #management:
+      #  type: mongodb
+      #  mongodb:
+      #    servers:
+      #      - host: mongo1
+      #        port: 27017
+      #      - host: mongo2
+      #        port: 27017
+      #    dbname: ${ds.mongodb.dbname}
+      #    connectTimeout: 500
+      #    socketTimeout: 250
+
+      services:
+        core:
+          http:
+            enabled: true
+            port: 18083
+            host: localhost
+            authentication:
+              # authentication type to be used for the core services
+              # - none : to disable authentication
+              # - basic : to use basic authentication
+              # default is "basic"
+              type: basic
+              users:
+                admin: adminadmin
+
+      # Analytics repository is used to store all reporting, metrics, healthchecks stored by gateway instances
+      # This is the default configuration using Elasticearch
+      analytics:
+        type: elasticsearch
+        elasticsearch:
+          endpoints:
+            - http://${ds.elastic.host}:${ds.elastic.port}
+      #    index: gravitee
+      #    cluster: elasticsearch
+
+      # Authentication and identity sources
+      # Users can have following roles (authorities):
+      #  USER: Can access portal and be a member of an API
+      #  API_PUBLISHER: Can create and manage APIs
+      #  API_CONSUMER: Can create and manage Applications
+      #  ADMIN: Can manage global system
+      security:
+        providers:  # authentication providers
+          - type: memory
+            # password encoding/hashing algorithm. One of:
+            # - bcrypt : passwords are hashed with bcrypt
+            # - none : passwords are not hashed/encrypted
+            # default value is bcrypt
+            password-encoding-algo: bcrypt
+            users:
+              - user:
+                username: user
+                # Passwords are encoded using BCrypt
+                # Password value: password
+                password: $2a$10$9kjw/SH9gucCId3Lnt6EmuFreUAcXSZgpvAYuW2ISv7hSOhHRH1AO
+                roles: MANAGEMENT:USER, PORTAL:USER
+              - user:
+                username: admin
+                # Password value: admin
+                password: $2a$10$Ihk05VSds5rUSgMdsMVi9OKMIx2yUvMz7y9VP3rJmQeizZLrhLMyq
+                roles: ADMIN
+              - user:
+                username: api1
+                # Password value: api1
+                password: $2a$10$iXdXO4wAYdhx2LOwijsp7.PsoAZQ05zEdHxbriIYCbtyo.y32LTji
+                # You can declare multiple roles using comma separator
+                roles: MANAGEMENT:API_PUBLISHER, PORTAL:API_PUBLISHER
+              - user:
+                username: application1
+                # Password value: application1
+                password: $2a$10$2gtKPYRB9zaVaPcn5RBx/.3T.7SeZoDGs9GKqbo9G64fKyXFR1He.
+                roles: MANAGEMENT:USER, PORTAL:USER
+          # Enable authentication using internal repository
+          - type: gravitee
+      #    - type: ldap
+            # This is default LDAP configuration for ApacheDS
+      #      context-source-username: "uid=admin,ou=system"
+      #      context-source-password: "secret"
+      #      context-source-url: "ldap://localhost:10389/c=io,o=gravitee"
+      #      context-source-base: "c=io,o=gravitee" # the context source base
+            # The 'user-dn-patterns' value is a specific pattern used to build the user's DN, for example "uid={0},ou=people". The key "{0}" must be present and will be substituted with the username.
+      #      user-dn-patterns: "uid={0},ou=people"
+            # Search base for user searches. Defaults to "". Only used with user-search-filter.
+      #      user-search-base: "o=user accounts"
+            # The LDAP filter used to search for users (optional). For example "(uid={0})". The substituted parameter is the user's login name.
+      #      user-search-filter: "mail={0}"
+            # The search base for group membership searches. Defaults to "".
+      #      group-search-base: "o=authorization groups"
+            # The LDAP filter to search for groups. Defaults to "(uniqueMember={0})". The substituted parameter is the DN of the user.
+      #      group-search-filter: "member={0}"
+            # Specifies the attribute name which contains the role name. Default is "cn".
+      #      group-role-attribute: "cn"
+            #   Use role-mapper to map LDAP role with internal Gravitee role (syntax { "user_ldap_role" : "user_new_added_ldap_role"})
+      #      role-mapper: {
+      #        GRAVITEE-CONSUMERS: API_CONSUMER,
+      #        GRAVITEE-PUBLISHERS: API_PUBLISHER,
+      #        GRAVITEE-ADMINS: ADMIN,
+      #        GRAVITEE-USERS: USER,
+      #      }
+      #    - type: google # Allow to authenticate to portal using a Google Plus account
+      #      clientId: xxxx-xxx-xxx-xxx
+      #      clientSecret: xxxx-xxx-xxx-xxxx
+      #    - type: github # Allow to authenticate to portal using a GitHub account
+      #      clientId: xxxx-xxx-xxx-xxx
+      #      clientSecret: xxxx-xxx-xxx-xxxx
+      #    - type: oauth2
+      #      clientId: xxxx-xxx-xxx-xxx
+      #      clientSecret: xxxx-xxx-xxx-xxx
+      #      tokenEndpoint: https://oauth2_authorization_server/token
+      #      userInfoEndpoint: https://oauth2_authorization_server/userinfo
+      #      accessTokenProperty: access_token
+      #      authorizationHeader: "Bearer %s"
+      #      mapping:
+      #        id: sub
+      #        email: email
+      #        lastname: family_name
+      #        firstname: given_name
+      #        picture: picture
+            #   by default created user will have default role for MANAGEMENT and PORTAL
+            #   you can override this by assigning user to groups, on user creation, if its user info content match expression
+      #     groups:
+      #       - mapping:
+      #           condition: "{#jsonPath(#profile, '$.identity_provider_id') == 'idp_5' && #jsonPath(#profile, '$.job_id') != 'API_BREAKER'}"
+      #           values: [Example group,soft user]
+      #       - mapping:
+      #           condition: "{#jsonPath(#profile, '$.job_id') != 'API_BREAKER'}"
+      #           values: ["Api consumer"]
+
+      # SMTP configuration used to send mails
+      email:
+        enabled: false
+        host: smtp.my.domain
+        subject: "[Gravitee.io] %s"
+      #  port: 465
+        from: noreply@my.domain
+        username: user@my.domain
+        password: password
+      #  properties:
+      #    auth: true
+      #    starttls.enable: true
+      #    ssl.trust: smtp.gmail.com
+
+      # Mail templates
+      #templates:
+      #  path: ${gravitee.home}/templates
+
+      # Referenced properties
+      ds:
+        mongodb:
+          dbname: gravitee
+          host: mongodb
+          port: 27017
+          username: gravitee
+          password: gravitee
+        elastic:
+          host: elasticsearch
+          port: 9200
+
+      jwt:
+        secret: myJWT4Gr4v1t33_S3cr3t
+        # Allows to define the end of validity of the token in seconds (default 604800 = a week)
+        #expire-after: 604800
+        # Allows to define the end of validity of the token in seconds for email registration (default 86400 = a day)
+        #email-registration-expire-after: 86400
+        # Allows to define issuer (default gravitee-management-auth)
+        #issuer: gravitee-management-auth
+        # Allows to define cookie context path (default /)
+        #cookie-path: /
+        # Allows to define cookie domain (default "")
+        #cookie-domain: .gravitee.io
+        # Allows to define if cookie secure only (default false)
+        #cookie-secure: true
+
+      swagger:
+        # Default scheme used when creating an API from a Swagger descriptor if there is no scheme specified.
+        scheme: https
+
+      user:
+         login:
+            # Create a default application when user connects to the portal for the very first time (default true)
+            defaultApplication: true
+         creation:
+            # Allows to register new users from portal (default false)
+            enabled: true
+            token:
+               expire-after: 86400
+
+      # The portal URL used in emails
+      portalURL: http://managementui-${NAMESPACE}.${OPENSHIFT_SUFFIXE}
+
+      # Allows to create support ticket (default value: false)
+      #support:
+        #enabled: true
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: gateway-config
+    labels:
+      compose: ${NAMESPACE}
+      app: gateway
+  data:
+    gravitee.yml: |-
+      ############################################################################################################
+      #################################### Gravitee.IO Gateway - Configuration ###################################
+      ############################################################################################################
+
+      ############################################################################################################
+      # This file is the general configuration of Gravitee.IO Gateway:
+      # - Properties (and respective default values) in comment are provided for information.
+      # - You can reference other property by using ${property.name} syntax
+      # - gravitee.home property is automatically set-up by launcher and refers to the installation path. Do not override it !
+      #
+      # Please have a look to http://docs.gravitee.io/ for more options and fine-grained granularity
+      ############################################################################################################
+
+      # Gateway HTTP server
+      #http:
+      #  port: 8082
+      #  host: 0.0.0.0
+      #  idleTimeout: 0
+      #  tcpKeepAlive: true
+      #  compressionSupported: false
+      #  instances: 0
+      #  secured: false
+      #  alpn: false
+      #  ssl:
+      #    clientAuth: false
+      #    keystore:
+      #      path: ${gravitee.home}/security/keystore.jks
+      #      password: secret
+      #    truststore:
+      #      path: ${gravitee.home}/security/truststore.jks
+      #      password: secret
+
+      # Plugins repository
+      #plugins:
+      #  path:
+      #    - ${gravitee.home}/plugins
+      #    - ${gravitee.home}/my-custom-plugins
+
+      # If a plugin is already installed (but with a different version), management node does not start anymore
+      #  failOnDuplicate: true
+
+      # Management repository is used to store global configuration such as APIs, applications, apikeys, ...
+      # This is the default configuration using MongoDB (single server)
+      # For more information about MongoDB configuration, please have a look to:
+      # - http://api.mongodb.org/java/current/com/mongodb/MongoClientOptions.html
+      management:
+        type: mongodb
+        mongodb:
+          dbname: ${ds.mongodb.dbname}
+          host: ${ds.mongodb.host}
+          port: ${ds.mongodb.port}
+          username: ${ds.mongodb.username}
+          password: ${ds.mongodb.password}
+      #    connectionsPerHost: 0
+      #    connectTimeout: 500
+      #    maxWaitTime: 120000
+      #    socketTimeout: 500
+      #    socketKeepAlive: false
+      #    maxConnectionLifeTime: 0
+      #    maxConnectionIdleTime: 0
+      #    serverSelectionTimeout: 0
+      #    description: gravitee.io
+      #    heartbeatFrequency: 10000
+      #    minHeartbeatFrequency: 500
+      #    heartbeatConnectTimeout: 1000
+      #    heartbeatSocketTimeout: 20000
+      #    localThreshold: 15
+      #    minConnectionsPerHost: 0
+      #    sslEnabled: false
+      #    threadsAllowedToBlockForConnectionMultiplier: 5
+      #    cursorFinalizerEnabled: true
+
+      # Management repository: single MongoDB using URI
+      # For more information about MongoDB configuration using URI, please have a look to:
+      # - http://api.mongodb.org/java/current/com/mongodb/MongoClientURI.html
+      #management:
+      #  type: mongodb
+      #  mongodb:
+      #    uri: mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+      # Management repository: clustered MongoDB
+      #management:
+      #  type: mongodb
+      #  mongodb:
+      #    servers:
+      #      - host: mongo1
+      #        port: 27017
+      #      - host: mongo2
+      #        port: 27017
+      #    dbname: ${ds.mongodb.dbname}
+      #    connectTimeout: 500
+      #    socketTimeout: 250
+
+      # When defining rate-limiting policy, the gateway has to store data to share with other gateway instances.
+      # In this example, we are using MongoDB to store counters.
+      ratelimit:
+        type: mongodb
+        mongodb:
+          uri: mongodb://${ds.mongodb.username}:${ds.mongodb.password}@${ds.mongodb.host}/${ds.mongodb.dbname}
+
+      cache:
+        type: ehcache
+
+      # Reporters configuration (used to store reporting monitoring data, request metrics, healthchecks and others...
+      # All reporters are enabled by default. To stop one of them, you have to add the property 'enabled: false'
+      reporters:
+        # Reporting system configuration
+        system:
+          buffersize: 4096 # Must be a power of 2
+
+        # Elasticsearch reporter
+        elasticsearch:
+          enabled: true # Is the reporter enabled or not (default to true)
+          endpoints:
+            - http://${ds.elastic.host}:${ds.elastic.port}
+      #    index: gravitee
+      #    cluster: elasticsearch
+      #    bulk:
+      #      actions: 1000           # Number of requests action before flush
+      #      flush_interval: 5       # Flush interval in seconds
+      #      concurrent_requests: 5  # Concurrent requests
+
+      # Gateway service configurations. Provided values are default values.
+      # All services are enabled by default. To stop one of them, you have to add the property 'enabled: false' (See the
+      # 'local' service for an example).
+      services:
+        core:
+          http:
+            enabled: true
+            port: 18082
+            host: localhost
+            authentication:
+              # authentication type to be used for the core services
+              # - none : to disable authentication
+              # - basic : to use basic authentication
+              # default is "basic"
+              type: basic
+              users:
+                admin: adminadmin
+
+        # Synchronization daemon used to keep the gateway state in sync with the configuration from the management repository
+        # Be aware that, by disabling it, the gateway will not be sync with the configuration done through management API
+        # and management UI
+        sync:
+          # Synchronization is done each 5 seconds
+          cron: '*/5 * * * * *'
+
+        # Service used to store and cache api-keys from the management repository to avoid direct repository communication
+        # while serving requests.
+        apikeyscache:
+          delay: 10000
+          unit: MILLISECONDS
+          threads: 3 # Threads core size used to retrieve api-keys from repository.
+
+        # Local registry service.
+        # This registry is used to load API Definition with json format from the file system. By doing so, you do not need
+        # to configure your API using the web console or the rest API (but you need to know and understand the json descriptor
+        # format to make it work....)
+        local:
+          enabled: false
+          path: ${gravitee.home}/apis # The path to API descriptors
+
+        # Gateway monitoring service.
+        # This service retrieves metrics like os / process / jvm metrics and send them to an underlying reporting service.
+        monitoring:
+          delay: 5000
+          unit: MILLISECONDS
+
+        # Endpoint healthcheck service.
+        healthcheck:
+          threads: 3 # Threads core size used to check endpoint availability
+
+      handlers:
+        request:
+          transaction:
+            header: X-Gravitee-Transaction-Id
+
+      # Referenced properties
+      ds:
+        mongodb:
+          dbname: gravitee
+          host: mongodb
+          port: 27017
+          username: gravitee
+          password: gravitee
+        elastic:
+          host: elasticsearch
+          port: 9200
+
+      # Sharding tags configuration
+      # Allows to define inclusion/exclusion sharding tags to only deploy a part of APIs. To exclude just prefix the tag with '!'.
+      #tags: products,stocks,!international
+
+      # Multi-tenant configuration
+      # Allow only a single-value
+      #tenant: europe
+
+      #policy:
+      # Customize the api-key header and / or query parameter
+      #  api-key:
+      #    header: X-Gravitee-Api-Key
+      #    param: api-key    
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -38,7 +577,7 @@ objects:
             value: elasticsearch
           - name: GRAVITEEIO_MONGODB_HOST
             value: mongodb
-          image: ${NAMESPACE}/gateway:${GRAVITEE_VERSION}
+          image: docker-registry.x5.ru/graviteeio/gateway:${GRAVITEE_VERSION}
           imagePullPolicy: Always
           name: gateway
           ports:
@@ -46,24 +585,23 @@ objects:
             protocol: TCP
           resources: {}
           terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /opt/graviteeio-gateway/config/gravitee.yml
+            subPath: gravitee.yml
+            name: gravitee
+        volumes:
+          - name: gravitee
+            configMap:
+              name: gateway-config
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         securityContext: {}
-        serviceAccount: ${NAMESPACE}
-        serviceAccountName: ${NAMESPACE}
+        serviceAccount: mrmdm-dev-sa
+        serviceAccountName: mrmdm-dev-sa
         terminationGracePeriodSeconds: 30
     test: false
     triggers:
     - type: ConfigChange
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - gateway
-        from:
-          kind: ImageStreamTag
-          name: 'gateway:${GRAVITEE_VERSION}'
-          namespace: ${NAMESPACE}
-      type: ImageChange
   status: {}
 - apiVersion: v1
   kind: DeploymentConfig
@@ -105,7 +643,7 @@ objects:
             value: 512m
           - name: GRAVITEEIO_PORTAL_URL
             value: http://managementui-${NAMESPACE}.${OPENSHIFT_SUFFIXE}
-          image: management-api:${GRAVITEE_VERSION}
+          image: docker-registry.x5.ru/graviteeio/management-api:${GRAVITEE_VERSION}
           imagePullPolicy: Always
           name: managementapi
           ports:
@@ -113,24 +651,23 @@ objects:
             protocol: TCP
           resources: {}
           terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /opt/graviteeio-management-api/config/gravitee.yml
+            subPath: gravitee.yml
+            name: management
+        volumes:
+          - name: management
+            configMap:
+              name: managementapi-config
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         securityContext: {}
-        serviceAccount: ${NAMESPACE}
-        serviceAccountName: ${NAMESPACE}
+        serviceAccount: mrmdm-dev-sa
+        serviceAccountName: mrmdm-dev-sa
         terminationGracePeriodSeconds: 30
     test: false
     triggers:
     - type: ConfigChange
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - managementapi
-        from:
-          kind: ImageStreamTag
-          name: 'management-api:${GRAVITEE_VERSION}'
-          namespace: ${NAMESPACE}
-      type: ImageChange
   status: {}
 - apiVersion: v1
   kind: DeploymentConfig
@@ -164,7 +701,7 @@ objects:
         - env:
           - name: MGMT_API_URL
             value: http://managementapi-${NAMESPACE}.${OPENSHIFT_SUFFIXE}/management/
-          image: management-ui:${GRAVITEE_VERSION}
+          image: docker-registry.x5.ru/graviteeio/management-ui:${GRAVITEE_VERSION}
           imagePullPolicy: Always
           name: managementui
           ports:
@@ -172,24 +709,27 @@ objects:
             protocol: TCP
           resources: {}
           terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /etc/nginx/conf.d/default.conf
+            subPath: default.conf
+            name: nginx-conf
+          - mountPath: /var/www/html/constants.json
+            subPath: constants.json
+            name: constants-conf
+        volumes:
+          - name: nginx-conf
+            configMap:
+              name: managementui-config
+          - name: constants-conf
+            configMap:
+              name: managementui-config
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         securityContext: {}
-        serviceAccount: ${NAMESPACE}
-        serviceAccountName: ${NAMESPACE}
         terminationGracePeriodSeconds: 30
     test: false
     triggers:
     - type: ConfigChange
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - managementui
-        from:
-          kind: ImageStreamTag
-          name: 'management-ui:${GRAVITEE_VERSION}'
-          namespace: ${NAMESPACE}
-      type: ImageChange
   status: {}
 - apiVersion: v1
   kind: Service
@@ -290,16 +830,148 @@ objects:
       name: managementui
       weight: 100
     wildcardPolicy: None
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: elasticsearch
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: elasticsearch
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: elasticsearch
+      spec:
+        containers:
+        - image: docker-registry.x5.ru/elasticsearch:2
+          imagePullPolicy: IfNotPresent
+          name: elasticsearch
+          ports:
+          - containerPort: 9200
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /usr/share/elasticsearch/data/
+            name: elasticdata1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: elasticdata1
+          persistentVolumeClaim:
+            claimName: api-gw-elastic-data
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    name: mongodb
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: mongodb
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          deploymentconfig: mongodb
+      spec:
+        containers:
+        - image: docker-registry.x5.ru/mongo:3.2
+          imagePullPolicy: IfNotPresent
+          name: mongodb
+          ports:
+          - containerPort: 27017
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /data/db
+            name: mongodata1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: mongodata1
+          persistentVolumeClaim:
+            claimName: api-gw-mongo-data
+    test: false
+    triggers:
+    - type: ConfigChange
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: elasticsearch
+  spec:
+    ports:
+    - name: 9300-tcp
+      port: 9200
+      protocol: TCP
+      targetPort: 9200
+    selector:
+      deploymentconfig: elasticsearch
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: mongodb
+  spec:
+    ports:
+    - name: 27017-tcp
+      port: 27017
+      protocol: TCP
+      targetPort: 27017
+    selector:
+      deploymentconfig: mongodb
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
 parameters:
   - name: NAMESPACE 
     description: Name of Project
-    value: gravitee
+    value: mrmdm-dev
     required: true 
   - name: GRAVITEE_VERSION 
     description: Verion of gravitee to deploy
-    value: 1.10.4
+    value: 1.25.5
     required: true 
   - name: OPENSHIFT_SUFFIXE
     description: Base of web access for openshift 
-    value: 192.168.99.101.nip.io
+    value: os-dev.x5.ru
     required: true
